@@ -1,20 +1,45 @@
 import { useState } from 'react';
-import { Box, Card, CardContent, Typography, TextField, Button, Avatar, InputAdornment, IconButton, Alert } from '@mui/material';
+import { Box, Card, CardContent, Typography, TextField, Button, Avatar, InputAdornment, IconButton, Alert, CircularProgress } from '@mui/material';
 import { Email, Lock, Visibility, VisibilityOff, Login as LoginIcon } from '@mui/icons-material';
 import logo from '../assets/focus.png';
+
+const loginUrl = () => {
+  const base = import.meta.env.VITE_API_URL;
+  if (base) return `${String(base).replace(/\/$/, '')}/api/login`;
+  return '/api/login';
+};
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (email === 'eduianbf@gmail.com' && password === 'teste123') {
-      onLogin();
-    } else {
-      setError('E-mail ou senha incorretos.');
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(loginUrl(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.message || 'E-mail ou senha incorretos.');
+        return;
+      }
+      if (!data.token) {
+        setError('Resposta inválida do servidor.');
+        return;
+      }
+      onLogin({ token: data.token, user: data.user });
+    } catch {
+      setError('Não foi possível conectar ao servidor. Verifique se a API está rodando.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,10 +127,11 @@ export default function Login({ onLogin }) {
               fullWidth
               variant="contained"
               size="large"
-              endIcon={<LoginIcon />}
+              disabled={loading}
+              endIcon={loading ? <CircularProgress size={22} color="inherit" /> : <LoginIcon />}
               sx={{ py: 1.5, fontSize: '1.1rem', mt: 1 }}
             >
-              Entrar
+              {loading ? 'Entrando…' : 'Entrar'}
             </Button>
           </form>
         </CardContent>

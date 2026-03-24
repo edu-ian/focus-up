@@ -3,6 +3,8 @@ import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 
+const SESSION_KEY = 'focus_up_session';
+
 const theme = createTheme({
   palette: {
     primary: { main: '#2563eb' }, // Azul moderno
@@ -42,16 +44,39 @@ const theme = createTheme({
   },
 });
 
+function readSessionLoggedIn() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.token) return true;
+    }
+  } catch {
+    localStorage.removeItem(SESSION_KEY);
+  }
+  return false;
+}
+
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Deixe true para você testar direto o Dashboard
+  const [isLoggedIn, setIsLoggedIn] = useState(readSessionLoggedIn);
+
+  const handleLogin = ({ token, user }) => {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ token, user }));
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(SESSION_KEY);
+    setIsLoggedIn(false);
+  };
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       {!isLoggedIn ? (
-        <Login onLogin={() => setIsLoggedIn(true)} />
+        <Login onLogin={handleLogin} />
       ) : (
-        <Dashboard onLogout={() => setIsLoggedIn(false)} />
+        <Dashboard onLogout={handleLogout} />
       )}
     </ThemeProvider>
   );
