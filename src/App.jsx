@@ -3,6 +3,7 @@ import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
+import UserDashboard from "./components/UserDashboard";
 
 // DESIGN SYSTEM: Tema customizado Material UI com design moderno
 const theme = createTheme({
@@ -44,31 +45,41 @@ const theme = createTheme({
   },
 });
 
-export default function App() {
-  // ESTADO GLOBAL REACT: Gerenciamento de sessão de usuário
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  // ROTEAMENTO CONDICIONAL: Controle de visualização (login vs registro)
-  const [currentView, setCurrentView] = useState('login');
+// ... teus imports no topo do arquivo ...
+import UserDashboard from "./components/UserDashboard";
+import AdminDashboard from "./components/Dashboard"; // O teu ficheiro Dashboard atual passa a ser o Admin
 
+// ... (definição do teu theme) ...
+
+export default function App() {
+  // 1. ESTADOS GLOBAIS: Gerenciamento de sessão e visualização
+  const [user, setUser] = useState(null); 
+  const [currentView, setCurrentView] = useState('login'); 
+
+  // 2. RETORNO ÚNICO: A árvore de componentes
   return (
-    // THEME PROVIDER: Injeção de dependência de estilos na árvore de componentes
     <ThemeProvider theme={theme}>
       <CssBaseline />
       
-      {!isLoggedIn ? (
+      {!user ? (
         currentView === 'login' ? (
           <Login 
-            onLogin={() => setIsLoggedIn(true)} 
+            onLogin={(data) => setUser(data.user)} // Guarda o utilizador retornado pelo Firebase
             onNavigateToRegister={() => setCurrentView('register')} 
           />
         ) : (
           <Register 
-            onRegister={() => setIsLoggedIn(true)}
+            onRegister={() => setCurrentView('login')} // Após registar, manda para login
             onNavigateToLogin={() => setCurrentView('login')} 
           />
         )
       ) : (
-        <Dashboard onLogout={() => setIsLoggedIn(false)} />
+        // Lógica de separação: Se o email for do admin, mostra o AdminDashboard, senão o UserDashboard
+        user.email === 'admin@focusup.com' ? (
+           <AdminDashboard onLogout={() => setUser(null)} />
+        ) : (
+           <UserDashboard user={user} onLogout={() => setUser(null)} />
+        )
       )}
     </ThemeProvider>
   );
