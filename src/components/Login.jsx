@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Box, Card, CardContent, Typography, TextField, Button, Avatar, InputAdornment, IconButton, Alert, CircularProgress, Divider, Link } from '@mui/material';
-import { Email, Lock, Visibility, VisibilityOff, Login as LoginIcon, Google } from '@mui/icons-material';
+import { Email, Lock, Visibility, VisibilityOff, Login as LoginIcon, Google, ArrowBack } from '@mui/icons-material'; // <-- Adicionado ArrowBack aqui
 import { auth, googleProvider } from '../firebase'; 
 import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth'; 
 import logo from '../assets/focus.png';
 
-export default function Login({ onLogin, onNavigateToRegister }) {
+export default function Login({ onLogin, onNavigateToRegister, onNavigateToLanding }) { // <-- Adicionado onNavigateToLanding aqui
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,6 +86,16 @@ export default function Login({ onLogin, onNavigateToRegister }) {
 
       <Card sx={{ maxWidth: 480, width: '100%', borderRadius: 6, boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)' }}>
         <CardContent sx={{ p: { xs: 5, sm: 6 } }}>
+          
+          {/* BOTÃO VOLTAR ADICIONADO AQUI */}
+          <Button 
+            startIcon={<ArrowBack />} 
+            onClick={onNavigateToLanding}
+            sx={{ mb: 2, color: 'text.secondary', textTransform: 'none', ml: -1 }}
+          >
+            Voltar ao início
+          </Button>
+
           <Box display="flex" flexDirection="column" alignItems="center" mb={5}>
             {/* BRANDING: Renderização de asset de marca (Avatar) */}
             <Avatar 
