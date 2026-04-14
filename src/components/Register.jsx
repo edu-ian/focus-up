@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Box, Card, CardContent, Typography, TextField, Button, Stack, Link, Alert } from '@mui/material';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore'; // IMPORT: Funções do Firestore
+import { auth, db } from '../firebase'; // IMPORT: Instância do banco de dados (db)
 
 export default function Register({ onRegister, onNavigateToLogin }) {
   // STATE MANAGEMENT: Controle de inputs do formulário
@@ -13,7 +14,7 @@ export default function Register({ onRegister, onNavigateToLogin }) {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ASYNC FUNCTION: Integração com Firebase Auth para criar usuário
+  // ASYNC FUNCTION: Integração com Firebase Auth para criar usuário e Firestore para dados
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -25,12 +26,27 @@ export default function Register({ onRegister, onNavigateToLogin }) {
     }
 
     try {
-      // FIREBASE API: Requisição de criação de conta
-      await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      onRegister(); // STATE LIFTING: Atualiza o estado no App.jsx
+      // 1. FIREBASE AUTH: Requisição de criação de conta
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
+
+      // 2. FIRESTORE DATABASE: Criação imediata do perfil e do Pet no banco de dados
+      await setDoc(doc(db, "users", user.uid), {
+        nome: formData.name || formData.email.split('@')[0],
+        nivel_pet: 1,
+        xp_pet: 0,
+        hunger: 100,
+        energy: 100,
+        evolution: 'Ovo',
+        lastUpdate: new Date(),
+        lastCategory: 'Foco Geral'
+      });
+
+      onRegister(); // STATE LIFTING: Atualiza o estado no App.jsx e redireciona
     } catch (err) {
       // ERROR HANDLING: Tratamento de exceções e feedback ao usuário
       setError('Erro ao criar conta: O e-mail já existe ou a senha é muito fraca.');
+      console.error(err);
     }
   };
 

@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Button, TextField, Stack, IconButton, Chip } from '@mui/material';
+import { Box, Card, CardContent, Typography, Button, TextField, Stack, IconButton } from '@mui/material';
 import { PlayArrow, Pause, Stop, CheckCircle } from '@mui/icons-material';
-import { doc, updateDoc, increment } from 'firebase/firestore';
+// IMPORTANTE: Importamos o setDoc para evitar erros se a conta for muito nova
+import { doc, setDoc, getDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 
 export default function PomodoroTimer({ userId, onSessionComplete }) {
-  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutos padrão
+  // Nota: Deixei 5 segundos para continuares a testar rápido! 
+  // Quando quiseres usar a sério, muda para 25 * 60
+  const [timeLeft, setTimeLeft] = useState(5); 
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
   const [task, setTask] = useState('');
@@ -22,29 +25,45 @@ export default function PomodoroTimer({ userId, onSessionComplete }) {
     return () => clearInterval(interval);
   }, [isActive, timeLeft]);
 
-  const handleTimerComplete = async () => {
+ const handleTimerComplete = async () => {
     setIsActive(false);
     
     if (!isBreak) {
-      // Terminou uma sessão de foco!
       alert("Sessão concluída! Ganhaste XP.");
       
-      // Atualizar Firebase do Utilizador
+      // Atualizar Firebase do Utilizador com Limite de Zero
       if (userId) {
         const userRef = doc(db, "users", userId);
+        const agora = new Date();
+        
         try {
-          await updateDoc(userRef, {
-            xp_pet: increment(150), // Ganha 150 XP por pomodoro
-            energy: increment(-10), // Gasta energia
-            hunger: increment(-15), // Fica com fome
-            lastCategory: currentTask || 'Foco Geral'
-          });
+          // 1. Lemos o status atual do Pet
+          const userSnap = await getDoc(userRef);
+          let novaEnergia = 90; // Valores padrão caso seja o primeiro pomodoro
+          let novaFome = 85;
+          
+          if (userSnap.exists()) {
+            const data = userSnap.data();
+            // 2. Calculamos o novo valor garantindo que nunca é menor que 0
+            novaEnergia = Math.max(0, (data.energy !== undefined ? data.energy : 100) - 10);
+            novaFome = Math.max(0, (data.hunger !== undefined ? data.hunger : 100) - 15);
+          }
+
+          // 3. Guardamos os novos valores calculados
+          await setDoc(userRef, {
+            xp_pet: increment(150),
+            energy: novaEnergia, 
+            hunger: novaFome,
+            lastCategory: currentTask || 'pomodoro',
+            moedas: increment(50),
+            lastUpdate: agora
+          }, { merge: true });
           
           // Atualizar métrica global
           const metricsRef = doc(db, "dashboard", "metrics");
-          await updateDoc(metricsRef, {
+          await setDoc(metricsRef, {
             total_pomodoros_app: increment(1)
-          });
+          }, { merge: true });
 
           if(onSessionComplete) onSessionComplete();
         } catch (error) {
@@ -52,11 +71,9 @@ export default function PomodoroTimer({ userId, onSessionComplete }) {
         }
       }
       
-      // Iniciar Pausa de 5 min
       setIsBreak(true);
       setTimeLeft(5 * 60);
     } else {
-      // Terminou a pausa
       alert("Pausa terminada. De volta ao trabalho!");
       setIsBreak(false);
       setTimeLeft(25 * 60);
@@ -110,7 +127,6 @@ export default function PomodoroTimer({ userId, onSessionComplete }) {
           </Button>
         </Stack>
 
-        {/* Gestão Simples de Tarefa */}
         <Box sx={{ mt: 4, p: 3, bgcolor: 'background.default', borderRadius: 4 }}>
           {currentTask ? (
             <Stack direction="row" alignItems="center" justifyContent="space-between">
