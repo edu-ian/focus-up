@@ -411,7 +411,7 @@ export default function UserDashboard({ user, onLogout }) {
           <Typography mb={2}>O Método Pomodoro é uma técnica de gestão de tempo desenvolvida no final dos anos 80. Consiste em dividir o trabalho em períodos de foco intenso, seguidos de pausas curtas.</Typography>
           <Typography mb={1}><strong>1. Modo Foco (25 min):</strong> Trabalha numa única tarefa sem qualquer distração.</Typography>
           <Typography mb={1}><strong>2. Pausa Curta (5 min):</strong> Descansa a mente, bebe água ou levanta-te.</Typography>
-          <Typography>No Focus Up, cada sessão de foco concluída recompensa-te com <strong>XP</strong> e <strong>Moedas</strong> para evoluíres o teu Pet!</Typography>
+          <Typography>No Focus Up, cada sessão de foco concluída recompensa-te com <strong>XP</strong> e <strong>Moedas</strong> para comprar no Mercado do foco e evoluíres o teu Pet!</Typography>
         </DialogContent>
       </Dialog>
 
@@ -423,7 +423,8 @@ export default function UserDashboard({ user, onLogout }) {
         </DialogTitle>
         <DialogContent dividers sx={{ borderColor: theme.border }}>
           <Typography mb={2}>Encontraste um bug ou precisas de ajuda com a tua conta?</Typography>
-          <Typography color="primary" fontWeight="bold">Email: suporte@focusup.com</Typography>
+          <Typography color="primary" fontWeight="bold">Email: eduianbf@gmail.com ou WhatsApp (41)992516116.</Typography>
+          <Typography>O Foca Aqui ainda esta em produção e por isso ele é instavel.</Typography>
         </DialogContent>
       </Dialog>
 
@@ -434,8 +435,9 @@ export default function UserDashboard({ user, onLogout }) {
           <IconButton onClick={() => setActiveModal(null)} sx={{ color: theme.textSec }}><Close/></IconButton>
         </DialogTitle>
         <DialogContent dividers sx={{ borderColor: theme.border }}>
-          <Typography mb={2}><strong>Focus Up</strong> foi criado para tornar a produtividade divertida e gratificante através da gamificação.</Typography>
-          <Typography>Desenvolvido com React, Material UI e Firebase.</Typography>
+          <Typography mb={2}><strong>Foca aqui</strong> foi criado para tornar a produtividade divertida e gratificante através da gamificação.</Typography>
+          <Typography>A ideia começou para suprir o meu TDAH e minha preguiça, mas assim veio a ideia de ajudar outras pessoas </Typography>
+          <Typography>Desenvolvido com carinho em React, Material UI e Firebase.</Typography>
         </DialogContent>
       </Dialog>
 

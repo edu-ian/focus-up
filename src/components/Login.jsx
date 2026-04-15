@@ -80,29 +80,29 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
         alignItems: 'center', 
         justifyContent: 'center',
         bgcolor: 'background.default',
-        p: 2
+        p: 3
       }}
     >
 
-      <Card sx={{ maxWidth: 480, width: '100%', borderRadius: 6, boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)' }}>
+      <Card sx={{ maxWidth: 480, width: '100%', borderRadius: 3, boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)' }}>
         <CardContent sx={{ p: { xs: 5, sm: 6 } }}>
           
           {/* BOTÃO VOLTAR ADICIONADO AQUI */}
           <Button 
             startIcon={<ArrowBack />} 
             onClick={onNavigateToLanding}
-            sx={{ mb: 2, color: 'text.secondary', textTransform: 'none', ml: -1 }}
+            sx={{ mb: 5, color: 'text.secondary', textTransform: 'none', ml: -1 }}
           >
             Voltar ao início
           </Button>
 
-          <Box display="flex" flexDirection="column" alignItems="center" mb={5}>
+          <Box display="flex" flexDirection="column" alignItems="center" mb={6}>
             {/* BRANDING: Renderização de asset de marca (Avatar) */}
             <Avatar 
               src={logo} 
               alt="Focus Up Logo" 
            
-              sx={{ width: 120, height: 120, mb: 3, bgcolor: 'transparent' }} 
+              sx={{ width: 150, height: 120, mb: 6, bgcolor: 'transparent' }} 
             />
             {/* TYPOGRAPHY: Hierarquia visual de títulos mantendo a consistência do Design System */}
             <Typography variant="h4" color="primary" fontWeight="bold">
@@ -162,7 +162,7 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
               }}
             />
 
-            {/* CALL TO ACTION SECUNDÁRIO: Roteamento virtual para recuperação de acesso */}
+            
             {/* Link de Esqueci a Senha */}
             <Box display="flex" justifyContent="flex-end" mb={3}>
               <Link
