@@ -77,7 +77,7 @@ export default function Dashboard({ onLogout }) {
           <Box display="flex" alignItems="center" gap={4}>
             <Avatar src={logo} alt="Focus Up Logo" sx={{ width: 100, height: 100, bgcolor: 'transparent', borderRadius: 0 }} />
             <Stack>
-              <Typography variant="h3" fontWeight="900" color="primary">Focus Up</Typography>
+              <Typography variant="h3" fontWeight="900" color="primary">Foca aqui</Typography>
               <Typography variant="subtitle1" color="text.secondary" fontWeight={500}>Painel do Administrador Geral</Typography>
             </Stack>
           </Box>

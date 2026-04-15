@@ -26,7 +26,7 @@ export default function LandingPage({ onNavigateToLogin }) {
               sx={{ height: 40, width: 'auto', objectFit: 'contain' }} 
             />
             <Typography variant="h6" sx={{ color: '#2563eb', fontWeight: '900', letterSpacing: '-0.5px' }}>
-              Focus-UP
+             Foca Aqui
             </Typography>
           </Box>
 
@@ -45,7 +45,7 @@ export default function LandingPage({ onNavigateToLogin }) {
         <Container maxWidth="md">
           <motion.div initial="hidden" animate="visible" variants={fadeUp}>
             <Typography variant="h2" sx={{ fontWeight: 800, mb: 3, color: '#1e293b', letterSpacing: '-1px' }}>
-              Domine seu tempo com o <Box component="span" sx={{ color: '#2563eb' }}>Focus-UP</Box>
+              Domine seu tempo com o <Box component="span" sx={{ color: '#2563eb' }}>Foca Aqui</Box>
             </Typography>
             <Typography variant="h6" sx={{ color: '#64748b', mb: 5, px: { xs: 2, md: 10 } }}>
               A solução definitiva contra a procrastinação, unindo ciência e gamificação.
@@ -64,7 +64,7 @@ export default function LandingPage({ onNavigateToLogin }) {
             <Grid item xs={12} md={6}>
               <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={fadeUp}>
                 <Typography variant="overline" sx={{ color: '#2563eb', fontWeight: 'bold', letterSpacing: 1.5 }}>
-                  Por que o Focus-UP?
+                  Por que o Foca Aqui?
                 </Typography>
                 <Typography variant="h3" sx={{ fontWeight: '800', color: '#1e293b', mt: 1, mb: 3, letterSpacing: '-0.5px' }}>
                   Uma resposta direta à procrastinação
