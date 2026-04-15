@@ -15,9 +15,17 @@ export default function Register({ onRegister, onNavigateToLogin }) {
   };
 
   // ASYNC FUNCTION: Integração com Firebase Auth para criar usuário e Firestore para dados
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+
+  // Verificação de segurança
+  if (nome.length > 20) {
+    setError('O nome deve ter no máximo 20 caracteres.');
+    return;
+  }
+
+  setLoading(true);
 
     // VALIDAÇÃO FRONT-END: Checagem de integridade de senha
     if (formData.password !== formData.confirmPassword) {
@@ -66,7 +74,16 @@ export default function Register({ onRegister, onNavigateToLogin }) {
           {/* FORM SUBMIT: Disparo da função principal de autenticação */}
           <form onSubmit={handleSubmit}>
             <Stack spacing={3}>
-              <TextField label="Nome Completo" name="name" onChange={handleChange} fullWidth required />
+              <TextField
+                  fullWidth
+                  label="Nome Completo"
+                  variant="outlined"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  inputProps={{ maxLength: 30 }} // 
+                  sx={{ mb: 2 }}
+                  required
+                />
               <TextField label="E-mail" name="email" type="email" onChange={handleChange} fullWidth required />
               <TextField label="Senha" name="password" type="password" onChange={handleChange} fullWidth required />
               <TextField label="Confirmar Senha" name="confirmPassword" type="password" onChange={handleChange} fullWidth required />

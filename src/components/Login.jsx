@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Box, Card, CardContent, Typography, TextField, Button, Avatar, InputAdornment, IconButton, Alert, CircularProgress, Divider, Link } from '@mui/material';
-import { Email, Lock, Visibility, VisibilityOff, Login as LoginIcon, Google, ArrowBack } from '@mui/icons-material'; // <-- Adicionado ArrowBack aqui
+import { Email, Lock, Visibility, VisibilityOff, Login as LoginIcon, Google, ArrowBack } from '@mui/icons-material'; 
 import { auth, googleProvider } from '../firebase'; 
 import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth'; 
 import logo from '../assets/focus.png';
 
-export default function Login({ onLogin, onNavigateToRegister, onNavigateToLanding }) { // <-- Adicionado onNavigateToLanding aqui
+export default function Login({ onLogin, onNavigateToRegister, onNavigateToLanding }) {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,19 +20,42 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
     setError('');
     setMessage('');
     setLoading(true);
+    
     try {
       // PROMISE RESOLUTION: Requisição assíncrona de autenticação no backend
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      onLogin({ user: userCredential.user }); // STATE LIFTING: Passa o objeto do usuário logado para o componente pai
+      onLogin({ user: userCredential.user }); // STATE LIFTING: Passa o objeto do usuário logado
     } catch (err) {
-      // ERROR HANDLING: Tratamento simplificado de erro para apresentação amigável
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+      // ERROR HANDLING: Tratamento simplificado de erro. NÃO ENVIA E-MAIL AQUI! Apenas mostra o erro.
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
         setError('E-mail ou senha incorretos.');
       } else {
         setError('Erro ao processar o login. Tente novamente.');
       }
     } finally {
-      setLoading(false); // PERFORMANCE: Encerra o estado de carregamento independente do resultado (sucesso ou falha)
+      setLoading(false); // PERFORMANCE: Encerra o estado de carregamento
+    }
+  };
+
+  // PASSWORD RECOVERY: Fluxo de redefinição de credenciais de usuário (QUANDO CLICA NO BOTÃO)
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Por favor, digite o seu e-mail no campo acima primeiro.');
+      return;
+    }
+    setError('');
+    setMessage('');
+    setLoading(true);
+    
+    try {
+      // EMAIL NOTIFICATION: Disparo de e-mail automatizado
+      await sendPasswordResetEmail(auth, email);
+      setMessage('E-mail de recuperação enviado! Verifique a sua caixa de entrada (e o spam).');
+    } catch (err) {
+      console.error(err);
+      setError('Erro ao enviar e-mail de recuperação. Verifique o endereço digitado.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,9 +65,9 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
     setMessage('');
     setLoading(true);
     try {
-      // POPUP AUTH: Abertura de janela modal para autenticação de terceiros (SSO - Single Sign-On)
+      // POPUP AUTH: Abertura de janela modal para autenticação de terceiros
       const result = await signInWithPopup(auth, googleProvider);
-      onLogin({ user: result.user }); // Passa o objeto do usuário logado
+      onLogin({ user: result.user }); 
     } catch (err) {
       setError('Erro ao logar com Google. Tente novamente.');
     } finally {
@@ -52,27 +75,7 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
     }
   };
 
-  // PASSWORD RECOVERY: Fluxo de redefinição de credenciais de usuário
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError('Digite seu e-mail para recuperar a senha.');
-      return;
-    }
-    setError('');
-    setLoading(true);
-    try {
-      // EMAIL NOTIFICATION: Disparo de e-mail transacional automatizado via Firebase
-      await sendPasswordResetEmail(auth, email);
-      setMessage('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
-    } catch (err) {
-      setError('Erro ao enviar e-mail de recuperação. Verifique o endereço digitado.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
- 
     <Box 
       sx={{ 
         minHeight: '100vh', 
@@ -83,11 +86,10 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
         p: 3
       }}
     >
-
       <Card sx={{ maxWidth: 480, width: '100%', borderRadius: 3, boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)' }}>
         <CardContent sx={{ p: { xs: 5, sm: 6 } }}>
           
-          {/* BOTÃO VOLTAR ADICIONADO AQUI */}
+          {/* BOTÃO VOLTAR */}
           <Button 
             startIcon={<ArrowBack />} 
             onClick={onNavigateToLanding}
@@ -101,10 +103,8 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
             <Avatar 
               src={logo} 
               alt="Focus Up Logo" 
-           
               sx={{ width: 150, height: 120, mb: 6, bgcolor: 'transparent' }} 
             />
-            {/* TYPOGRAPHY: Hierarquia visual de títulos mantendo a consistência do Design System */}
             <Typography variant="h4" color="primary" fontWeight="bold">
               Bem-vindo
             </Typography>
@@ -113,7 +113,7 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
             </Typography>
           </Box>
 
-          {/* FORM HANDLING: Captura de dados de entrada com validação integrada */}
+          {/* FORM HANDLING: Captura de dados de entrada */}
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
@@ -121,9 +121,8 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
               label="E-mail"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)} // TWO-WAY DATA BINDING: Atualização do estado em tempo real
+              onChange={(e) => setEmail(e.target.value)} 
               required
-     
               sx={{ mb: 4 }}
               InputProps={{
                 startAdornment: (
@@ -139,11 +138,10 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
               fullWidth
               variant="outlined"
               label="Senha"
-              type={showPassword ? 'text' : 'password'} // CONDITIONAL RENDERING: Alternância dinâmica do tipo de input
+              type={showPassword ? 'text' : 'password'} 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-             
               sx={{ mb: 2 }}
               InputProps={{
                 startAdornment: (
@@ -162,11 +160,11 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
               }}
             />
 
-            
             {/* Link de Esqueci a Senha */}
             <Box display="flex" justifyContent="flex-end" mb={3}>
               <Link
                 component="button"
+                type="button"
                 variant="body2"
                 onClick={handleForgotPassword}
                 sx={{ textTransform: 'none', color: 'text.secondary' }}
@@ -175,21 +173,21 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
               </Link>
             </Box>
 
-            {/* USER FEEDBACK: Exibição condicional de alertas de erro baseados no estado */}
+            {/* USER FEEDBACK: Alertas de Erro */}
             {error && (
               <Alert severity="error" sx={{ mb: 3, borderRadius: 3 }}>
                 {error}
               </Alert>
             )}
 
-            {/* USER FEEDBACK: Exibição condicional de alertas de sucesso operacionais */}
+            {/* USER FEEDBACK: Alertas de Sucesso */}
             {message && (
               <Alert severity="success" sx={{ mb: 3, borderRadius: 3 }}>
                 {message}
               </Alert>
             )}
 
-            {/* CALL TO ACTION PRIMÁRIO: Botão de submissão com indicador de progresso (UX Load State) */}
+            {/* CALL TO ACTION PRIMÁRIO */}
             <Button
               type="submit"
               fullWidth
@@ -203,13 +201,11 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
             </Button>
           </form>
 
-      
-          {/* VISUAL DIVIDER: Separação semântica entre métodos de autenticação */}
+          {/* VISUAL DIVIDER */}
           <Divider sx={{ my: 4, color: 'text.secondary' }}>
             <Typography variant="body2">OU</Typography>
           </Divider>
 
-      
           {/* Botão do Google */}
           <Button
             fullWidth
@@ -217,13 +213,13 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
             size="large"
             startIcon={<Google />}
             onClick={handleGoogleLogin}
+            disabled={loading}
             sx={{ py: 1.8, borderRadius: 3, textTransform: 'none', borderColor: 'grey.300', color: 'text.primary', '&:hover': { borderColor: 'grey.400' } }}
           >
             Entrar com Google
-
-            
           </Button>
-          {/* NAVIGATION: Redirecionamento para a tela de registro de novos usuários */}
+
+          {/* NAVIGATION: Redirecionamento para Registro */}
           <Box sx={{ mt: 4, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
               Ainda não tem uma conta?{' '}
@@ -238,6 +234,7 @@ export default function Login({ onLogin, onNavigateToRegister, onNavigateToLandi
               </Link>
             </Typography>
           </Box>
+
         </CardContent>
       </Card>
     </Box>

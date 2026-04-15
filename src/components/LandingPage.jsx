@@ -1,9 +1,13 @@
-import React from 'react';
-import { Box, Typography, Button, Container, Grid, TextField, AppBar, Toolbar } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, Button, Container, Grid, TextField, AppBar, Toolbar, Paper } from '@mui/material';
 import { motion } from 'framer-motion';
 
 // IMPORTAÇÃO DA LOGO
 import focusLogo from '../assets/focus.png'; 
+
+// IMPORTAÇÕES DO FIREBASE (necessárias para o suporte)
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase'; 
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -11,6 +15,37 @@ const fadeUp = {
 };
 
 export default function LandingPage({ onNavigateToLogin }) {
+  // === ESTADOS PARA O SUPORTE ===
+  const [suporteTexto, setSuporteTexto] = useState('');
+  const [suporteFeedback, setSuporteFeedback] = useState('');
+  const [enviandoSuporte, setEnviandoSuporte] = useState(false);
+
+  // === FUNÇÃO PARA ENVIAR SUPORTE ===
+  const handleEnviarSuporteVisitante = async () => {
+    if (!suporteTexto.trim()) {
+      setSuporteFeedback('Por favor, digite uma mensagem.');
+      return;
+    }
+    setEnviandoSuporte(true);
+    setSuporteFeedback('A enviar a sua mensagem...');
+
+    try {
+      await addDoc(collection(db, "suporte"), {
+        tipo: "visitante", // Identifica que veio da Landing Page
+        mensagem: suporteTexto,
+        data: new Date(),
+        status: 'novo'
+      });
+      setSuporteFeedback('✅ Mensagem enviada com sucesso!');
+      setSuporteTexto('');
+    } catch (error) {
+      console.error("Erro ao enviar suporte:", error);
+      setSuporteFeedback('❌ Erro ao enviar. Verifique a sua ligação.');
+    } finally {
+      setEnviandoSuporte(false);
+    }
+  };
+
   return (
     <Box sx={{ bgcolor: '#f8fafc', minHeight: '100vh', width: '100%', display: 'block' }}>
       
@@ -32,7 +67,7 @@ export default function LandingPage({ onNavigateToLogin }) {
 
           <Box sx={{ display: 'flex', gap: { xs: 1, md: 3 }, alignItems: 'center' }}>
             <Button href="#sobre" sx={{ color: '#475569', textTransform: 'none', fontWeight: 500 }}>Sobre</Button>
-            <Button href="#suporte" sx={{ color: '#475569', textTransform: 'none', fontWeight: 500 }}>Suporte</Button>
+            <Button href="#support" sx={{ color: '#475569', textTransform: 'none', fontWeight: 500 }}>Suporte</Button>
             <Button variant="contained" onClick={onNavigateToLogin} sx={{ bgcolor: '#2563eb', textTransform: 'none', borderRadius: '24px', px: 3, fontWeight: 'bold' }}>
               Entrar
             </Button>
@@ -93,26 +128,52 @@ export default function LandingPage({ onNavigateToLogin }) {
         </Container>
       </Box>
 
-      {/* SUPORTE SECTION DE VOLTA! */}
-      <Box id="suporte" sx={{ py: 15, bgcolor: '#f8fafc' }}>
-        <Container maxWidth="sm">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={fadeUp}>
-            <Box sx={{ textAlign: 'center', mb: 6 }}>
-              <Typography variant="overline" sx={{ color: '#2563eb', fontWeight: 'bold', letterSpacing: 1.5 }}>Suporte</Typography>
-              <Typography variant="h3" sx={{ fontWeight: '800', color: '#1e293b', mt: 1, letterSpacing: '-0.5px' }}>Como podemos ajudar?</Typography>
-            </Box>
-            <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3, p: 4, bgcolor: '#ffffff', borderRadius: '24px', boxShadow: '0 10px 40px rgba(0,0,0,0.03)' }}>
-              <TextField label="Nome" fullWidth variant="outlined" sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }} />
-              <TextField label="E-mail" fullWidth variant="outlined" sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }} />
-              <TextField label="Mensagem" fullWidth multiline rows={4} variant="outlined" sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }} />
-              <Button variant="contained" size="large" sx={{ bgcolor: '#2563eb', py: 1.8, borderRadius: '12px', mt: 2, fontWeight: 'bold', textTransform: 'none', fontSize: '1.1rem' }}>
-                Enviar
-              </Button>
-            </Box>
-          </motion.div>
+      {/* SEÇÃO DE SUPORTE */}
+      <Box id="support" sx={{ py: 8, bgcolor: '#f8fafc' }}>
+        <Container maxWidth="md">
+          <Typography variant="h4" fontWeight="bold" textAlign="center" mb={4} sx={{ color: '#1e293b' }}>
+            Precisa de Ajuda?
+          </Typography>
+          <Paper sx={{ p: 4, borderRadius: 4, boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.05)' }}>
+            
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              placeholder="Escreva a sua dúvida ou sugestão aqui..."
+              value={suporteTexto}
+              onChange={(e) => setSuporteTexto(e.target.value)}
+              disabled={enviandoSuporte}
+              sx={{ mb: 2 }}
+            />
+
+            {/* FEEDBACK VISUAL */}
+            {suporteFeedback && (
+              <Typography 
+                textAlign="center" 
+                mb={2}
+                fontWeight="bold"
+                color={suporteFeedback.includes('❌') ? 'error.main' : (suporteFeedback.includes('✅') ? 'success.main' : 'text.secondary')}
+              >
+                {suporteFeedback}
+              </Typography>
+            )}
+
+            <Button
+              variant="contained"
+              size="large"
+              fullWidth
+              onClick={handleEnviarSuporteVisitante}
+              disabled={enviandoSuporte || !suporteTexto.trim()}
+              sx={{ bgcolor: '#2563eb', fontWeight: 'bold' }}
+            >
+              {enviandoSuporte ? 'A ENVIAR...' : 'ENVIAR MENSAGEM'}
+            </Button>
+
+          </Paper>
         </Container>
-      </Box>
+      </Box> 
 
     </Box>
-  );
+  );      
 }

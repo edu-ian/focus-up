@@ -10,10 +10,12 @@ import {
   Assignment, Edit, PriorityHigh, Info, LowPriority, LightMode, DarkMode,
   Menu as MenuIcon, Person, Timer, HelpOutline, Close
 } from '@mui/icons-material';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment, collection, addDoc  } from 'firebase/firestore';
 import { db } from '../firebase';
 import PomodoroTimer from './PomodoroTimer';
 import Shop from './Shop';
+
+
 
 const calcularNivel = (xpTotal) => {
   let nivel = 1;
@@ -37,6 +39,9 @@ const PRIORIDADES = {
 };
 
 export default function UserDashboard({ user, onLogout }) {
+  const [suporteTexto, setSuporteTexto] = useState('');
+  const [suporteFeedback, setSuporteFeedback] = useState('');
+  const [enviandoSuporte, setEnviandoSuporte] = useState(false);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('dashboard');
@@ -59,6 +64,28 @@ export default function UserDashboard({ user, onLogout }) {
     const savedTheme = localStorage.getItem('appTheme');
     return savedTheme ? savedTheme === 'dark' : false;
   });
+
+  const handleEnviarSuporte = async () => {
+    if (!suporteTexto.trim()) return;
+    setEnviandoSuporte(true);
+    try {
+      await addDoc(collection(db, "suporte"), {
+        uid: user.uid,
+        nome: userData?.nome || 'Usuário',
+        mensagem: suporteTexto,
+        data: new Date()
+      });
+      setSuporteFeedback('Mensagem enviada com sucesso! A nossa equipa irá analisar.');
+      setSuporteTexto('');
+      setTimeout(() => {
+        setSuporteFeedback('');
+        setActiveModal(null);
+      }, 3000);
+    } catch (error) {
+      setSuporteFeedback('Erro ao enviar mensagem. Tente novamente.');
+    }
+    setEnviandoSuporte(false);
+  };
 
   useEffect(() => {
     localStorage.setItem('appTheme', isDarkMode ? 'dark' : 'light');
@@ -183,6 +210,10 @@ export default function UserDashboard({ user, onLogout }) {
               <ListItemText primary="Sobre o Projeto" />
             </ListItem>
           </List>
+          <ListItem button onClick={() => setActiveModal('pet')} sx={{ borderRadius: 2, mb: 1 }}>
+  <ListItemIcon><Pets /></ListItemIcon>
+  <ListItemText primary="Como funciona o Pet?" />
+</ListItem>
           <Button variant="outlined" color="error" fullWidth startIcon={<Logout />} onClick={onLogout}>
             Sair da Conta
           </Button>
@@ -190,7 +221,7 @@ export default function UserDashboard({ user, onLogout }) {
       </Drawer>
 
       {view === 'shop' ? (
-        <Shop userData={{ ...userData, uid: user.uid }} onBack={() => setView('dashboard')} onPurchase={fetchUserData} />
+        <Shop userData={{ ...userData, uid: user.uid }} onBack={() => setView('dashboard')} onPurchase={fetchUserData} isDarkMode={isDarkMode} />
       ) : (
         <Box sx={{ maxWidth: 1200, margin: '0 auto' }}>
           
@@ -282,7 +313,7 @@ export default function UserDashboard({ user, onLogout }) {
                   </CardContent>
                 </Card>
 
-                {/* Pomodoro Timer (Movido para Baixo) */}
+                {/* Pomodoro Timer  */}
                 <PomodoroTimer userId={user.uid} onSessionComplete={fetchUserData} isDarkMode={isDarkMode} />
               </Stack>
             </Grid>
@@ -333,32 +364,33 @@ export default function UserDashboard({ user, onLogout }) {
 
       {/* --- MODAIS DO MENU --- */}
 
-      {/* Modal de Perfil */}
-      <Dialog open={activeModal === 'profile'} onClose={() => setActiveModal(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: theme.cardBg, color: theme.text, borderRadius: 2 } }}>
-        <DialogTitle display="flex" justifyContent="space-between" alignItems="center">
-          Meu Perfil 
-          <IconButton onClick={() => setActiveModal(null)} sx={{ color: theme.textSec }}><Close /></IconButton>
-        </DialogTitle>
-        <DialogContent dividers sx={{ borderColor: theme.border }}>
-          <Stack direction={{xs: 'column', sm: 'row'}} spacing={4} alignItems="center" mb={4}>
-            <Avatar src={editFoto} sx={{ width: 100, height: 100, fontSize: '3rem', bgcolor: '#6366f1' }}>
-              {!editFoto && editNome.charAt(0).toUpperCase()}
-            </Avatar>
-            <Box width="100%">
-              <TextField 
-                fullWidth margin="dense" label="Nome de Exibição" 
-                value={editNome} onChange={(e) => setEditNome(e.target.value)} 
-                sx={{ input: { color: theme.text }, label: { color: theme.textSec }, mb: 2 }} 
-              />
-              <TextField 
-                fullWidth margin="dense" label="URL da Foto de Perfil" placeholder="https://..." 
-                value={editFoto} onChange={(e) => setEditFoto(e.target.value)} 
-                sx={{ input: { color: theme.text }, label: { color: theme.textSec } }} 
-              />
-            </Box>
-          </Stack>
-          
-          <Typography variant="h6" fontWeight="bold" mb={2}>Estatísticas</Typography>
+   {/* Modal de Perfil */}
+<Dialog open={activeModal === 'profile'} onClose={() => setActiveModal(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: theme.cardBg, color: theme.text, borderRadius: 2 } }}>
+  <DialogTitle display="flex" justifyContent="space-between" alignItems="center">
+    Meu Perfil 
+    <IconButton onClick={() => setActiveModal(null)} sx={{ color: theme.textSec }}><Close /></IconButton>
+  </DialogTitle>
+  <DialogContent dividers sx={{ borderColor: theme.border }}>
+    <Stack direction={{xs: 'column', sm: 'row'}} spacing={4} alignItems="center" mb={4}>
+      <Avatar src={editFoto} sx={{ width: 100, height: 100, fontSize: '3rem', bgcolor: '#6366f1' }}>
+        {!editFoto && editNome?.charAt(0).toUpperCase()}
+      </Avatar>
+      <Box width="100%">
+        <TextField 
+          fullWidth margin="dense" label="Nome de Exibição" 
+          value={editNome} onChange={(e) => setEditNome(e.target.value)} 
+          inputProps={{ maxLength: 30 }} /* 🔒 LIMITE DE 30 CARACTERES AQUI */
+          helperText={`${editNome?.length || 0}/30 caracteres`} /* Contador visual */
+          sx={{ input: { color: theme.text }, label: { color: theme.textSec }, mb: 2 }} 
+        />
+        <TextField 
+          fullWidth margin="dense" label="URL da Foto de Perfil" placeholder="https://..." 
+          value={editFoto} onChange={(e) => setEditFoto(e.target.value)} 
+          sx={{ input: { color: theme.text }, label: { color: theme.textSec } }} 
+        />
+      </Box>
+    </Stack>
+    <Typography variant="h6" fontWeight="bold" mb={2}>Estatísticas</Typography>
           
           {/* Aqui está o Grid das estatísticas agora quebrado em várias linhas */}
           <Grid container spacing={2}>
@@ -441,6 +473,48 @@ export default function UserDashboard({ user, onLogout }) {
         </DialogContent>
       </Dialog>
 
+      {/* --- MODAL: EXPLICAÇÃO DO PET (ATUALIZADO) --- */}
+<Dialog 
+  open={activeModal === 'pet'} 
+  onClose={() => setActiveModal(null)}
+  PaperProps={{
+    sx: {
+      bgcolor: theme.cardBg, // Aplica a cor de fundo do modo noturno
+      color: theme.text,     
+      borderRadius: 2,
+      position: 'relative',
+      minWidth: 300
+    }
+  }}
+>
+  {/* Botão X no topo */}
+  <IconButton
+    aria-label="close"
+    onClick={() => setActiveModal(null)}
+    sx={{
+      position: 'absolute',
+      right: 8,
+      top: 8,
+      color: theme.textSec,
+    }}
+  >
+    <Close /> 
+  </IconButton>
+
+  <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 6 }}>
+    <Pets sx={{ color: theme.primary }} /> 
+    <Typography variant="h6" fontWeight="bold">Como funciona o seu Pet?</Typography>
+  </DialogTitle>
+
+  <DialogContent>
+    <Typography paragraph sx={{ color: theme.textSec }}>
+      O seu Pet evolui com o XP que ganha ao completar as suas sessões de foco.
+    </Typography>
+    <Typography sx={{ color: theme.textSec }}>
+      Não se esqueça de o manter alimentado usando os itens do <strong>Mercado</strong> para que ele continue saudável e feliz!
+    </Typography>
+  </DialogContent>
+</Dialog>
       {/* Modal de Edição de Tarefa */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} PaperProps={{ sx: { bgcolor: theme.cardBg, color: theme.text, borderRadius: 2 } }}>
         <DialogTitle>Editar Tarefa</DialogTitle>
