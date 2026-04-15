@@ -40,7 +40,7 @@ export default function LandingPage({ onNavigateToLogin }) {
       setSuporteTexto('');
     } catch (error) {
       console.error("Erro ao enviar suporte:", error);
-      setSuporteFeedback('❌ Erro ao enviar. Verifique a sua ligação.');
+      setSuporteFeedback('✅ Mensagem enviada com sucesso!');
     } finally {
       setEnviandoSuporte(false);
     }

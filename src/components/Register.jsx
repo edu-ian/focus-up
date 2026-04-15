@@ -1,44 +1,40 @@
 import { useState } from 'react';
-import { Box, Card, CardContent, Typography, TextField, Button, Stack, Link, Alert } from '@mui/material';
+import { Box, Card, CardContent, Typography, TextField, Button, Stack, Link, Alert, CircularProgress } from '@mui/material';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore'; // IMPORT: Funções do Firestore
-import { auth, db } from '../firebase'; // IMPORT: Instância do banco de dados (db)
+import { doc, setDoc } from 'firebase/firestore'; 
+import { auth, db } from '../firebase'; 
 
 export default function Register({ onRegister, onNavigateToLogin }) {
-  // STATE MANAGEMENT: Controle de inputs do formulário
+  // Estado único para controlar os inputs
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false); // Adicionado o estado que faltava
 
-  // EVENT HANDLER: Atualização dinâmica do estado (Two-way data binding)
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ASYNC FUNCTION: Integração com Firebase Auth para criar usuário e Firestore para dados
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
 
-  // Verificação de segurança
-  if (nome.length > 20) {
-    setError('O nome deve ter no máximo 20 caracteres.');
-    return;
-  }
+    // Verificação de segurança corrigida para usar formData.name
+    if (formData.name.length > 20) {
+      setError('O nome deve ter no máximo 20 caracteres.');
+      return;
+    }
 
-  setLoading(true);
-
-    // VALIDAÇÃO FRONT-END: Checagem de integridade de senha
     if (formData.password !== formData.confirmPassword) {
       setError('As senhas não coincidem!');
       return;
     }
 
+    setLoading(true);
+
     try {
-      // 1. FIREBASE AUTH: Requisição de criação de conta
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       const user = userCredential.user;
 
-      // 2. FIRESTORE DATABASE: Criação imediata do perfil e do Pet no banco de dados
       await setDoc(doc(db, "users", user.uid), {
         nome: formData.name || formData.email.split('@')[0],
         nivel_pet: 1,
@@ -50,57 +46,53 @@ const handleSubmit = async (e) => {
         lastCategory: 'Foco Geral'
       });
 
-      onRegister(); // STATE LIFTING: Atualiza o estado no App.jsx e redireciona
+      onRegister(); 
     } catch (err) {
-      // ERROR HANDLING: Tratamento de exceções e feedback ao usuário
       setError('Erro ao criar conta: O e-mail já existe ou a senha é muito fraca.');
       console.error(err);
+      setLoading(false); // Reseta o botão em caso de erro
     }
   };
 
   return (
-    // LAYOUT FLEXBOX: Centralização de conteúdo responsiva
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
       <Card sx={{ maxWidth: 450, width: '100%', p: 2 }}>
         <CardContent>
           <Typography variant="h5" align="center" gutterBottom color="primary">Criar Nova Conta</Typography>
           <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 4 }}>
-            Preencha os dados abaixo para garantir seu acesso.
+            Preenche os dados abaixo para garantir o teu acesso.
           </Typography>
 
-          {/* USER FEEDBACK: Exibição condicional de mensagens de erro */}
           {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-          {/* FORM SUBMIT: Disparo da função principal de autenticação */}
           <form onSubmit={handleSubmit}>
             <Stack spacing={3}>
+              {/* Campo de nome corrigido para alinhar com o formData */}
               <TextField
                   fullWidth
                   label="Nome Completo"
+                  name="name"
                   variant="outlined"
-                  value={nome}
-                  onChange={(e) => setNome(e.target.value)}
-                  inputProps={{ maxLength: 30 }} // 
-                  sx={{ mb: 2 }}
+                  value={formData.name}
+                  onChange={handleChange}
+                  inputProps={{ maxLength: 20 }} 
                   required
                 />
-              <TextField label="E-mail" name="email" type="email" onChange={handleChange} fullWidth required />
-              <TextField label="Senha" name="password" type="password" onChange={handleChange} fullWidth required />
-              <TextField label="Confirmar Senha" name="confirmPassword" type="password" onChange={handleChange} fullWidth required />
+              <TextField label="E-mail" name="email" type="email" value={formData.email} onChange={handleChange} fullWidth required />
+              <TextField label="Senha" name="password" type="password" value={formData.password} onChange={handleChange} fullWidth required />
+              <TextField label="Confirmar Senha" name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleChange} fullWidth required />
               
-              {/* CALL TO ACTION (CTA): Botão de conversão principal */}
-              <Button type="submit" variant="contained" size="large" fullWidth sx={{ mt: 2 }}>
-                Cadastrar
+              <Button type="submit" variant="contained" size="large" fullWidth sx={{ mt: 2 }} disabled={loading}>
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Cadastrar'}
               </Button>
             </Stack>
           </form>
 
           <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              Já tem uma conta?{' '}
-              {/* NAVIGATION: Redirecionamento interno sem reload (SPA) */}
+              Já tens uma conta?{' '}
               <Link component="button" variant="body2" onClick={onNavigateToLogin} underline="hover" sx={{ fontWeight: 600 }}>
-                Faça login aqui
+                Faz login aqui
               </Link>
             </Typography>
           </Box>
