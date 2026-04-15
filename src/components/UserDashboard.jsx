@@ -218,12 +218,10 @@ export default function UserDashboard({ user, onLogout }) {
           </Box>
 
           <Grid container spacing={3}>
-            {/* Esquerda: Pomodoro e Tarefas */}
+            {/* Esquerda: Tarefas em Cima, Pomodoro em Baixo */}
             <Grid size={{ xs: 12, md: 7 }}>
               <Stack spacing={3}>
-                <PomodoroTimer userId={user.uid} onSessionComplete={fetchUserData} isDarkMode={isDarkMode} />
-                
-                {/* Lista de Tarefas */}
+                {/* Lista de Tarefas (Movida para Cima) */}
                 <Card sx={{ bgcolor: theme.cardBg, color: theme.text, borderRadius: 2, border: `1px solid ${theme.border}`, transition: 'all 0.3s ease' }}>
                   <CardContent sx={{ p: 3 }}>
                     <Typography variant="h6" fontWeight="700" mb={3} display="flex" alignItems="center" gap={1}>
@@ -283,6 +281,9 @@ export default function UserDashboard({ user, onLogout }) {
                     </List>
                   </CardContent>
                 </Card>
+
+                {/* Pomodoro Timer (Movido para Baixo) */}
+                <PomodoroTimer userId={user.uid} onSessionComplete={fetchUserData} isDarkMode={isDarkMode} />
               </Stack>
             </Grid>
 
@@ -298,10 +299,11 @@ export default function UserDashboard({ user, onLogout }) {
                   </Box>
 
                   <Box textAlign="center" mb={4}>
-                    <Box sx={{ width: 120, height: 120, mx: 'auto', mb: 2, bgcolor: theme.petCircle, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #6366f1' }}>
-                      <Pets sx={{ fontSize: 60, color: '#6366f1' }} />
+                    {/* Substituição do Ícone Pets pela imagem da foca (focus.png) */}
+                    <Box sx={{ width: 120, height: 120, mx: 'auto', mb: 2, bgcolor: theme.petCircle, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '4px solid #6366f1', overflow: 'hidden' }}>
+                      <img src="/focus.png" alt="Foca" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
                     </Box>
-                    <Typography variant="h6" fontWeight="bold">{userData?.evolution}</Typography>
+                    <Typography variant="h6" fontWeight="bold">{userData?.evolution || 'Foca Iniciante'}</Typography>
                     
                     <Box sx={{ mt: 3, p: 2, bgcolor: theme.petBoxBg, borderRadius: 2 }}>
                       <Box display="flex" justifyContent="space-between" mb={1}>
@@ -437,7 +439,7 @@ export default function UserDashboard({ user, onLogout }) {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Edição de Tarefa (Antigo) */}
+      {/* Modal de Edição de Tarefa */}
       <Dialog open={editOpen} onClose={() => setEditOpen(false)} PaperProps={{ sx: { bgcolor: theme.cardBg, color: theme.text, borderRadius: 2 } }}>
         <DialogTitle>Editar Tarefa</DialogTitle>
         <DialogContent>

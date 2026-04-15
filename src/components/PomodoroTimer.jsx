@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, Typography, Button, Stack } from '@mui/material';
-import { PlayArrow, Pause, Stop } from '@mui/icons-material';
+import { Card, CardContent, Typography, Button, Stack, Box } from '@mui/material';
+import { PlayArrow, Pause, Stop, Timer } from '@mui/icons-material';
 import { doc, setDoc, getDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 
+// Configuração dos modos de tempo e recompensas
+const MODOS = {
+  rapido: { label: '10 min', focus: 10, break: 3, xp: 50, coins: 15 },
+  padrao: { label: '25 min', focus: 25, break: 5, xp: 150, coins: 50 },
+  profundo: { label: '50 min', focus: 50, break: 10, xp: 350, coins: 120 }
+};
+
 export default function PomodoroTimer({ userId, onSessionComplete, isDarkMode }) {
-  // 5 segundos para testes. Mudar para 25 * 60 na versão real
-  const [timeLeft, setTimeLeft] = useState(5); 
+  const [modoAtual, setModoAtual] = useState('padrao');
+  const [timeLeft, setTimeLeft] = useState(MODOS.padrao.focus * 60); 
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
 
@@ -14,7 +21,7 @@ export default function PomodoroTimer({ userId, onSessionComplete, isDarkMode })
     let interval = null;
     if (isActive && timeLeft > 0) {
       interval = setInterval(() => setTimeLeft((time) => time - 1), 1000);
-    } else if (timeLeft === 0) {
+    } else if (isActive && timeLeft === 0) {
       handleTimerComplete();
     }
     return () => clearInterval(interval);
@@ -22,9 +29,10 @@ export default function PomodoroTimer({ userId, onSessionComplete, isDarkMode })
 
   const handleTimerComplete = async () => {
     setIsActive(false);
+    const recompensas = MODOS[modoAtual];
     
     if (!isBreak) {
-      alert("Sessão concluída! Ganhaste XP e Moedas.");
+      alert(`Sessão concluída! Ganhaste ${recompensas.xp} XP e ${recompensas.coins} Moedas.`);
       
       if (userId) {
         const userRef = doc(db, "users", userId);
@@ -40,13 +48,14 @@ export default function PomodoroTimer({ userId, onSessionComplete, isDarkMode })
             novaEnergia = Math.max(0, (data.energy !== undefined ? data.energy : 100) - 10);
             novaFome = Math.max(0, (data.hunger !== undefined ? data.hunger : 100) - 15);
           }
-      await setDoc(userRef, {
-            xp_pet: increment(150),
+          
+          await setDoc(userRef, {
+            xp_pet: increment(recompensas.xp),
             energy: novaEnergia, 
             hunger: novaFome,
             lastCategory: 'pomodoro',
-            moedas: increment(50),
-            pomodoros_feitos: increment(1), // <--- ADICIONA ESTA LINHA AQUI
+            moedas: increment(recompensas.coins),
+            pomodoros_feitos: increment(1),
             lastUpdate: agora
           }, { merge: true });
           
@@ -62,11 +71,11 @@ export default function PomodoroTimer({ userId, onSessionComplete, isDarkMode })
       }
       
       setIsBreak(true);
-      setTimeLeft(5 * 60);
+      setTimeLeft(recompensas.break * 60);
     } else {
       alert("Pausa terminada. De volta ao trabalho!");
       setIsBreak(false);
-      setTimeLeft(25 * 60);
+      setTimeLeft(recompensas.focus * 60);
     }
   };
 
@@ -74,7 +83,19 @@ export default function PomodoroTimer({ userId, onSessionComplete, isDarkMode })
   
   const resetTimer = () => {
     setIsActive(false);
-    setTimeLeft(isBreak ? 5 * 60 : 25 * 60);
+    const recompensas = MODOS[modoAtual];
+    setTimeLeft(isBreak ? recompensas.break * 60 : recompensas.focus * 60);
+  };
+
+  const alterarModo = (chaveModo) => {
+    if (isActive) {
+      const confirmar = window.confirm("Mudar de modo irá resetar o temporizador atual. Deseja continuar?");
+      if (!confirmar) return;
+    }
+    setModoAtual(chaveModo);
+    setIsActive(false);
+    setIsBreak(false);
+    setTimeLeft(MODOS[chaveModo].focus * 60);
   };
 
   const formatTime = (seconds) => {
@@ -83,7 +104,6 @@ export default function PomodoroTimer({ userId, onSessionComplete, isDarkMode })
     return `${m}:${s}`;
   };
 
-  // Cores dinâmicas
   const cardBg = isDarkMode ? '#1e293b' : '#ffffff';
   const textPrimary = isDarkMode ? '#fff' : '#0f172a';
   const borderColor = isDarkMode ? '#334155' : '#cbd5e1';
@@ -97,10 +117,35 @@ export default function PomodoroTimer({ userId, onSessionComplete, isDarkMode })
     }}>
       <CardContent>
         <Typography variant="overline" sx={{ color: isBreak ? '#10b981' : '#6366f1', fontWeight: '900', letterSpacing: 2 }}>
-          {isBreak ? 'MODO DESCANSO' : 'MODO FoCO'}
+          {isBreak ? 'MODO DESCANSO' : 'MODO FOCO'}
         </Typography>
 
-        <Typography variant="h1" fontWeight="900" sx={{ my: 4, fontSize: {xs: '4rem', md: '5rem'}, color: textPrimary, transition: 'color 0.3s ease' }}>
+        {/* Botões de Seleção de Tempo */}
+        {!isBreak && (
+          <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 2, mb: 1 }}>
+            {Object.entries(MODOS).map(([chave, config]) => (
+              <Button
+                key={chave}
+                size="small"
+                variant={modoAtual === chave ? 'contained' : 'outlined'}
+                onClick={() => alterarModo(chave)}
+                sx={{
+                  borderRadius: 2,
+                  bgcolor: modoAtual === chave ? '#6366f1' : 'transparent',
+                  color: modoAtual === chave ? '#fff' : textPrimary,
+                  borderColor: '#6366f1',
+                  '&:hover': {
+                    bgcolor: modoAtual === chave ? '#4f46e5' : 'rgba(99, 102, 241, 0.1)',
+                  }
+                }}
+              >
+                {config.label}
+              </Button>
+            ))}
+          </Stack>
+        )}
+
+        <Typography variant="h1" fontWeight="900" sx={{ my: 3, fontSize: {xs: '4rem', md: '5rem'}, color: textPrimary, transition: 'color 0.3s ease' }}>
           {formatTime(timeLeft)}
         </Typography>
 
