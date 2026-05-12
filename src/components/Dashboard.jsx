@@ -2,23 +2,34 @@ import { useState, useEffect } from 'react';
 import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Box, Card, CardContent, Typography, Grid, Button, Avatar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, CircularProgress, LinearProgress, Stack } from '@mui/material';
+import { Box, Card, CardContent, Typography, Grid, Button, Avatar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, CircularProgress, LinearProgress, Stack, Tabs, Tab } from '@mui/material';
 import { PeopleAlt, VerifiedUser, Logout, Pets, Stars, BarChart, BookmarkBorder } from '@mui/icons-material';
 import logo from '../assets/focus.png';
+import { fetchLastNDaysAccess } from '../services/analyticsService';
+import AdminSolicitationsPanel from './AdminSolicitationsPanel';
+import AdminDonationsPanel from './AdminDonationsPanel';
 
 const COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#a1cfff', '#cbd5e1'];
+
+function colorForId(id) {
+  if (!id) return COLORS[0];
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h += id.charCodeAt(i);
+  return COLORS[h % COLORS.length];
+}
 
 export default function Dashboard({ onLogout }) {
   const [metrics, setMetrics] = useState({ total_pomodoros_app: 0 });
   const [petData, setPetData] = useState([]);
+  const [accessData, setAccessData] = useState([]);
+  const [adminTab, setAdminTab] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        
-        // 1. Métrica Global
+
         const metricsRef = doc(db, "dashboard", "metrics");
         const metricsSnap = await getDoc(metricsRef);
         if (metricsSnap.exists()) {
@@ -26,13 +37,13 @@ export default function Dashboard({ onLogout }) {
         } else {
           await setDoc(metricsRef, { total_pomodoros_app: 0 });
         }
-        
-        // 2. Utilizadores Reais
+
         const usersCollection = collection(db, "users");
         const userSnapshot = await getDocs(usersCollection);
-        const usersList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
+        const usersList = userSnapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+
         setPetData(usersList);
+        setAccessData(await fetchLastNDaysAccess(7));
       } catch (error) {
         console.error("Erro no Admin:", error);
       } finally {
@@ -50,14 +61,6 @@ export default function Dashboard({ onLogout }) {
   }, {});
   
   const dynamicPieData = Object.keys(evolutionCounts).map(key => ({ name: key, value: evolutionCounts[key] }));
-
-  // Gráfico de Acessos Mock
-  const accessData = [
-    { name: 'Seg', acessos: 1120 }, { name: 'Ter', acessos: 2250 },
-    { name: 'Qua', acessos: 1680 }, { name: 'Qui', acessos: 3320 },
-    { name: 'Sex', acessos: 4110 }, { name: 'Sáb', acessos: 2990 },
-    { name: 'Dom', acessos: 1450 },
-  ];
 
   if (loading) {
     return (
@@ -87,7 +90,28 @@ export default function Dashboard({ onLogout }) {
         </Box>
       </Card>
 
-      {/* Cards de Métricas Reais com Hover Effects */}
+      <Card sx={{ mb: 4, borderRadius: 4 }}>
+        <Tabs value={adminTab} onChange={(_, v) => setAdminTab(v)} variant="scrollable" scrollButtons="auto">
+          <Tab label="Visão geral" />
+          <Tab label="Solicitações" />
+          <Tab label="Contribuições" />
+        </Tabs>
+      </Card>
+
+      {adminTab === 1 && (
+        <Card sx={{ borderRadius: 6, p: 3, mb: 6 }}>
+          <AdminSolicitationsPanel />
+        </Card>
+      )}
+
+      {adminTab === 2 && (
+        <Card sx={{ borderRadius: 6, p: 3, mb: 6 }}>
+          <AdminDonationsPanel />
+        </Card>
+      )}
+
+      {adminTab === 0 && (
+      <>
       <Grid container spacing={5} sx={{ mb: 6 }}>
         {[
           { title: "Total de Utilizadores Registados", value: petData.length, icon: <PeopleAlt fontSize="inherit" color="primary" /> },
@@ -118,7 +142,7 @@ export default function Dashboard({ onLogout }) {
             <CardContent sx={{ p: 5 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                 <Typography variant="h4" fontWeight="800">Tendência de Acessos</Typography>
-                <Chip icon={<BarChart />} label="Mock" color="default" variant="outlined" sx={{ fontWeight: 600 }} />
+                <Chip icon={<BarChart />} label="Logins (últimos 7 dias)" color="primary" variant="outlined" sx={{ fontWeight: 600 }} />
               </Box>
               <Box sx={{ height: 400, mt: 3 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -182,7 +206,7 @@ export default function Dashboard({ onLogout }) {
                     <TableRow key={row.id} hover>
                       <TableCell>
                         <Stack direction="row" alignItems="center" gap={2}>
-                          <Avatar sx={{ bgcolor: COLORS[Math.floor(Math.random() * COLORS.length)] }}>
+                          <Avatar sx={{ bgcolor: colorForId(row.id) }}>
                             {row.nome ? row.nome.charAt(0).toUpperCase() : '?'}
                           </Avatar>
                           <Typography variant="h6" fontWeight={700}>{row.nome || 'Sem Nome'}</Typography>
@@ -228,6 +252,8 @@ export default function Dashboard({ onLogout }) {
           </TableContainer>
         </CardContent>
       </Card>
+      </>
+      )}
     </Box>
   );
 }

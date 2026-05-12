@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Box, Card, CardContent, Typography, Grid, Button, Avatar, LinearProgress, Stack, CircularProgress, Chip } from '@mui/material';
-import { Logout, Pets, Stars, Storefront, AttachMoney } from '@mui/icons-material';
+import { Logout, Pets, Stars, Storefront, AttachMoney, Assignment, VolunteerActivism, Settings as SettingsIcon } from '@mui/icons-material';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import PomodoroTimer from './PomodoroTimer';
-import Shop from './Shop'; // Importamos a loja
+import Shop from './Shop';
+import AccountSettings from './Settings';
+import MySolicitations from './MySolicitations';
+import MyDonations from './MyDonations';
 
 export default function UserDashboard({ user, onLogout }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // ESTADO DA TELA: Controla se vemos o Dashboard ou a Loja
-  const [view, setView] = useState('dashboard'); 
+  const [view, setView] = useState('dashboard');
 
   const fetchUserData = async () => {
     try {
@@ -47,7 +49,8 @@ export default function UserDashboard({ user, onLogout }) {
           xp_pet: 0,
           hunger: 100,
           energy: 100,
-          moedas: 0, // Inicia com 0 moedas
+          moedas: 0,
+          perfil: 'aluno',
           evolution: 'Ovo',
           lastUpdate: agora
         };
@@ -63,6 +66,7 @@ export default function UserDashboard({ user, onLogout }) {
 
   useEffect(() => {
     fetchUserData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   if (loading) return <CircularProgress sx={{ display: 'block', mx: 'auto', mt: 10 }} />;
@@ -77,10 +81,15 @@ export default function UserDashboard({ user, onLogout }) {
           onBack={() => setView('dashboard')} 
           onPurchase={fetchUserData} 
         />
+      ) : view === 'solicitacoes' ? (
+        <MySolicitations user={user} userData={userData} onBack={() => setView('dashboard')} />
+      ) : view === 'doacoes' ? (
+        <MyDonations user={user} userData={userData} onBack={() => setView('dashboard')} />
+      ) : view === 'settings' ? (
+        <AccountSettings user={user} userData={userData} onBack={() => setView('dashboard')} onSaved={fetchUserData} />
       ) : (
         <>
-          {/* Header do Utilizador */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+          <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} gap={2} mb={4}>
             <Stack direction="row" alignItems="center" gap={2}>
               <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main' }}>
                 {userData?.nome?.charAt(0).toUpperCase()}
@@ -88,15 +97,25 @@ export default function UserDashboard({ user, onLogout }) {
               <Box>
                 <Typography variant="h4" fontWeight="800">Olá, {userData?.nome}!</Typography>
                 <Typography variant="subtitle1" color="text.secondary">O que vamos focar hoje?</Typography>
+                <Chip size="small" sx={{ mt: 1 }} label={`Perfil: ${userData?.perfil || 'aluno'}`} variant="outlined" />
               </Box>
             </Stack>
-            <Stack direction="row" spacing={2}>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="flex-end">
+              <Button variant="outlined" startIcon={<Assignment />} onClick={() => setView('solicitacoes')} sx={{ borderRadius: 8 }}>
+                Solicitações
+              </Button>
+              <Button variant="outlined" startIcon={<VolunteerActivism />} onClick={() => setView('doacoes')} sx={{ borderRadius: 8 }}>
+                Contribuir
+              </Button>
+              <Button variant="outlined" startIcon={<SettingsIcon />} onClick={() => setView('settings')} sx={{ borderRadius: 8 }}>
+                Definições
+              </Button>
               <Button 
                 variant="contained" 
                 color="secondary" 
                 startIcon={<Storefront />}
                 onClick={() => setView('shop')}
-                sx={{ borderRadius: 8, px: 3, fontWeight: 'bold' }}
+                sx={{ borderRadius: 8, px: 2, fontWeight: 'bold' }}
               >
                 Mercado
               </Button>
@@ -107,12 +126,10 @@ export default function UserDashboard({ user, onLogout }) {
           </Box>
 
           <Grid container spacing={4}>
-            {/* Lado Esquerdo: O Cronómetro */}
             <Grid item xs={12} md={7}>
               <PomodoroTimer userId={user.uid} onSessionComplete={fetchUserData} />
             </Grid>
 
-            {/* Lado Direito: Status do Pet Gamificado */}
             <Grid item xs={12} md={5}>
               <Card sx={{ borderRadius: 6, height: '100%' }}>
                 <CardContent sx={{ p: 4 }}>

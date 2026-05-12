@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Box, Card, CardContent, Typography, TextField, Button, Avatar, InputAdornment, IconButton, Alert, CircularProgress, Divider, Link } from '@mui/material';
 import { Email, Lock, Visibility, VisibilityOff, Login as LoginIcon, Google } from '@mui/icons-material';
-import { auth, googleProvider } from '../firebase'; 
-import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth'; 
+import { auth, googleProvider } from '../firebase';
+import { signInWithEmailAndPassword, signInWithPopup, sendPasswordResetEmail } from 'firebase/auth';
 import logo from '../assets/focus.png';
+import { logDailyAccess } from '../services/analyticsService';
 
 export default function Login({ onLogin, onNavigateToRegister }) {
   
@@ -23,7 +24,12 @@ export default function Login({ onLogin, onNavigateToRegister }) {
     try {
       // PROMISE RESOLUTION: Requisição assíncrona de autenticação no backend
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      onLogin({ user: userCredential.user }); // STATE LIFTING: Passa o objeto do usuário logado para o componente pai
+      try {
+        await logDailyAccess();
+      } catch (e) {
+        console.warn('analytics_daily:', e);
+      }
+      onLogin({ user: userCredential.user });
     } catch (err) {
       // ERROR HANDLING: Tratamento simplificado de erro para apresentação amigável
       if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
@@ -44,8 +50,13 @@ export default function Login({ onLogin, onNavigateToRegister }) {
     try {
       // POPUP AUTH: Abertura de janela modal para autenticação de terceiros (SSO - Single Sign-On)
       const result = await signInWithPopup(auth, googleProvider);
-      onLogin({ user: result.user }); // Passa o objeto do usuário logado
-    } catch (err) {
+      try {
+        await logDailyAccess();
+      } catch (e) {
+        console.warn('analytics_daily:', e);
+      }
+      onLogin({ user: result.user });
+    } catch {
       setError('Erro ao logar com Google. Tente novamente.');
     } finally {
       setLoading(false);
@@ -64,7 +75,7 @@ export default function Login({ onLogin, onNavigateToRegister }) {
       // EMAIL NOTIFICATION: Disparo de e-mail transacional automatizado via Firebase
       await sendPasswordResetEmail(auth, email);
       setMessage('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
-    } catch (err) {
+    } catch {
       setError('Erro ao enviar e-mail de recuperação. Verifique o endereço digitado.');
     } finally {
       setLoading(false);

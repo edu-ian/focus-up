@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import Login from "./components/Login";
 import Register from "./components/Register";
-import AdminDashboard from "./components/Dashboard"; 
-import UserDashboard from "./components/UserDashboard"; 
+import AdminDashboard from "./components/Dashboard";
+import UserDashboard from "./components/UserDashboard";
+import { NotifyProvider } from "./context/NotifyContext";
+import { getAdminEmail } from "./config/env";
 
 // DESIGN SYSTEM: Tema customizado Material UI com design moderno
 const theme = createTheme({
@@ -53,10 +55,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState('login');
 
   return (
-    // THEME PROVIDER: Injeção de dependência de estilos na árvore de componentes
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      
+      <NotifyProvider>
       {!user ? (
         currentView === 'login' ? (
           <Login 
@@ -71,12 +72,13 @@ export default function App() {
         )
       ) : (
         // Lógica de separação: Se o email for do admin, mostra o painel geral, senão o painel do pet
-        user.email === 'admin@focusup.com' ? (
+        user.email === getAdminEmail() ? (
            <AdminDashboard onLogout={() => setUser(null)} />
         ) : (
            <UserDashboard user={user} onLogout={() => setUser(null)} />
         )
       )}
+      </NotifyProvider>
     </ThemeProvider>
   );
 }

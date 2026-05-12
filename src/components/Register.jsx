@@ -1,12 +1,18 @@
 import { useState } from 'react';
-import { Box, Card, CardContent, Typography, TextField, Button, Stack, Link, Alert } from '@mui/material';
+import { Box, Card, CardContent, Typography, TextField, Button, Stack, Link, Alert, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore'; // IMPORT: Funções do Firestore
 import { auth, db } from '../firebase'; // IMPORT: Instância do banco de dados (db)
 
 export default function Register({ onRegister, onNavigateToLogin }) {
   // STATE MANAGEMENT: Controle de inputs do formulário
-  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    perfil: 'aluno',
+  });
   const [error, setError] = useState('');
 
   // EVENT HANDLER: Atualização dinâmica do estado (Two-way data binding)
@@ -33,13 +39,15 @@ export default function Register({ onRegister, onNavigateToLogin }) {
       // 2. FIRESTORE DATABASE: Criação imediata do perfil e do Pet no banco de dados
       await setDoc(doc(db, "users", user.uid), {
         nome: formData.name || formData.email.split('@')[0],
+        perfil: formData.perfil,
         nivel_pet: 1,
         xp_pet: 0,
         hunger: 100,
         energy: 100,
+        moedas: 0,
         evolution: 'Ovo',
         lastUpdate: new Date(),
-        lastCategory: 'Foco Geral'
+        lastCategory: 'Foco Geral',
       });
 
       onRegister(); // STATE LIFTING: Atualiza o estado no App.jsx e redireciona
@@ -70,6 +78,20 @@ export default function Register({ onRegister, onNavigateToLogin }) {
               <TextField label="E-mail" name="email" type="email" onChange={handleChange} fullWidth required />
               <TextField label="Senha" name="password" type="password" onChange={handleChange} fullWidth required />
               <TextField label="Confirmar Senha" name="confirmPassword" type="password" onChange={handleChange} fullWidth required />
+              <FormControl fullWidth>
+                <InputLabel id="perfil-label">Perfil</InputLabel>
+                <Select
+                  labelId="perfil-label"
+                  label="Perfil"
+                  name="perfil"
+                  value={formData.perfil}
+                  onChange={(e) => setFormData({ ...formData, perfil: e.target.value })}
+                >
+                  <MenuItem value="aluno">Aluno / foco individual</MenuItem>
+                  <MenuItem value="mentor">Mentor / educador</MenuItem>
+                  <MenuItem value="apoiador">Apoiador da comunidade</MenuItem>
+                </Select>
+              </FormControl>
               
               {/* CALL TO ACTION (CTA): Botão de conversão principal */}
               <Button type="submit" variant="contained" size="large" fullWidth sx={{ mt: 2 }}>

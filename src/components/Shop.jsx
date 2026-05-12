@@ -2,6 +2,7 @@ import { Box, Card, CardContent, Typography, Button, Grid, Stack, Avatar } from 
 import { ShoppingCart, Restaurant, FlashOn, ArrowBack, AttachMoney } from '@mui/icons-material';
 import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useNotify } from '../context/NotifyContext';
 
 const ITEMS = [
   { id: 'marmita', name: 'Marmita Caseira', price: 30, restore: 25, type: 'hunger', icon: <Restaurant />, desc: '+25 Fome' },
@@ -9,10 +10,11 @@ const ITEMS = [
 ];
 
 export default function Shop({ userData, onBack, onPurchase }) {
-  
+  const notify = useNotify();
+
   const handleBuy = async (item) => {
     if ((userData.moedas || 0) < item.price) {
-      alert("Moedas insuficientes!");
+      notify.error('Moedas insuficientes!');
       return;
     }
 
@@ -27,8 +29,8 @@ export default function Shop({ userData, onBack, onPurchase }) {
         moedas: increment(-item.price),
         [item.type]: novoStatus
       });
-      alert(`Compraste ${item.name}!`);
-      onPurchase(); // Atualiza a UI do Dashboard
+      notify.success(`Compraste ${item.name}!`);
+      onPurchase();
     } catch (error) {
       console.error("Erro na compra:", error);
     }

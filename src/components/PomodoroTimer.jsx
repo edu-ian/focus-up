@@ -4,32 +4,24 @@ import { PlayArrow, Pause, Stop, CheckCircle } from '@mui/icons-material';
 // IMPORTANTE: Importamos o setDoc para evitar erros se a conta for muito nova
 import { doc, setDoc, getDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useNotify } from '../context/NotifyContext';
+
+const WORK_SEC = 25 * 60;
+const BREAK_SEC = 5 * 60;
 
 export default function PomodoroTimer({ userId, onSessionComplete }) {
-  // Nota: Deixei 5 segundos para continuares a testar rápido! 
-  // Quando quiseres usar a sério, muda para 25 * 60
-  const [timeLeft, setTimeLeft] = useState(5); 
+  const notify = useNotify();
+  const [timeLeft, setTimeLeft] = useState(WORK_SEC);
   const [isActive, setIsActive] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
   const [task, setTask] = useState('');
   const [currentTask, setCurrentTask] = useState(null);
 
-  // Lógica do Cronómetro
-  useEffect(() => {
-    let interval = null;
-    if (isActive && timeLeft > 0) {
-      interval = setInterval(() => setTimeLeft((time) => time - 1), 1000);
-    } else if (timeLeft === 0) {
-      handleTimerComplete();
-    }
-    return () => clearInterval(interval);
-  }, [isActive, timeLeft]);
-
- const handleTimerComplete = async () => {
+  async function handleTimerComplete() {
     setIsActive(false);
     
     if (!isBreak) {
-      alert("Sessão concluída! Ganhaste XP.");
+      notify.success('Sessão concluída! Ganhaste XP.');
       
       // Atualizar Firebase do Utilizador com Limite de Zero
       if (userId) {
@@ -72,19 +64,31 @@ export default function PomodoroTimer({ userId, onSessionComplete }) {
       }
       
       setIsBreak(true);
-      setTimeLeft(5 * 60);
+      setTimeLeft(BREAK_SEC);
     } else {
-      alert("Pausa terminada. De volta ao trabalho!");
+      notify.success('Pausa terminada. De volta ao trabalho!');
       setIsBreak(false);
-      setTimeLeft(25 * 60);
+      setTimeLeft(WORK_SEC);
     }
-  };
+  }
+
+  useEffect(() => {
+    let interval = null;
+    if (isActive && timeLeft > 0) {
+      interval = setInterval(() => setTimeLeft((time) => time - 1), 1000);
+    } else if (timeLeft === 0) {
+      handleTimerComplete();
+    }
+    return () => clearInterval(interval);
+    // handleTimerComplete depende do estado na conclusão; incluir nas deps re-dispara ao zerar.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, timeLeft]);
 
   const toggleTimer = () => setIsActive(!isActive);
   
   const resetTimer = () => {
     setIsActive(false);
-    setTimeLeft(isBreak ? 5 * 60 : 25 * 60);
+    setTimeLeft(isBreak ? BREAK_SEC : WORK_SEC);
   };
 
   const formatTime = (seconds) => {

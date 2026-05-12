@@ -1,0 +1,29 @@
+### Health
+GET http://127.0.0.1:8787/health
+
+### Regressão (score)
+POST http://127.0.0.1:8787/predict/score
+Content-Type: application/json
+
+{
+  "horas_estudo": 6,
+  "pausas": 3
+}
+
+### Clusterização
+POST http://127.0.0.1:8787/cluster/users
+Content-Type: application/json
+
+{
+  "amostras": [[1, 5], [2, 4], [8, 1], [9, 0]],
+  "k": 2
+}
+
+### Erro esperado (k inválido)
+POST http://127.0.0.1:8787/cluster/users
+Content-Type: application/json
+
+{
+  "amostras": [[1]],
+  "k": 2
+}
