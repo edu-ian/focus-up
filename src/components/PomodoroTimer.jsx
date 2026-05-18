@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Box, Card, CardContent, Typography, Button, TextField, Stack, IconButton } from '@mui/material';
 import { PlayArrow, Pause, Stop, CheckCircle } from '@mui/icons-material';
-// IMPORTANTE: Importamos o setDoc para evitar erros se a conta for muito nova
 import { doc, setDoc, getDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useNotify } from '../context/NotifyContext';
+import {
+  applyFocusSession,
+  applyBreakRecovery,
+  REWARD_COINS_FOCUS,
+  REWARD_XP_FOCUS,
+  REWARD_COINS_BREAK,
+  REWARD_XP_BREAK,
+  getLevelFromXp,
+  didLevelUp,
+} from '../game/petBalance';
 
 const WORK_SEC = 25 * 60;
 const BREAK_SEC = 5 * 60;
@@ -17,56 +26,108 @@ export default function PomodoroTimer({ userId, onSessionComplete }) {
   const [task, setTask] = useState('');
   const [currentTask, setCurrentTask] = useState(null);
 
+  async function savePetUpdate(patch, successMessage, xpBefore = null, xpAfter = null, countPomodoro = false) {
+    if (!userId) return;
+    const userRef = doc(db, 'users', userId);
+    await setDoc(userRef, { ...patch, lastUpdate: new Date() }, { merge: true });
+
+    if (countPomodoro) {
+      const metricsRef = doc(db, 'dashboard', 'metrics');
+      await setDoc(metricsRef, { total_pomodoros_app: increment(1) }, { merge: true }).catch(() => {});
+    }
+
+    if (xpBefore != null && xpAfter != null && didLevelUp(xpBefore, xpAfter)) {
+      const { nivel, evolution } = getLevelFromXp(xpAfter);
+      notify.success(`${successMessage} Subiste para o nível ${nivel} (${evolution})!`);
+    } else {
+      notify.success(successMessage);
+    }
+    onSessionComplete?.();
+  }
+
   async function handleTimerComplete() {
     setIsActive(false);
-    
+
     if (!isBreak) {
-      notify.success('Sessão concluída! Ganhaste XP.');
-      
-      // Atualizar Firebase do Utilizador com Limite de Zero
-      if (userId) {
-        const userRef = doc(db, "users", userId);
-        const agora = new Date();
-        
-        try {
-          // 1. Lemos o status atual do Pet
-          const userSnap = await getDoc(userRef);
-          let novaEnergia = 90; // Valores padrão caso seja o primeiro pomodoro
-          let novaFome = 85;
-          
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            // 2. Calculamos o novo valor garantindo que nunca é menor que 0
-            novaEnergia = Math.max(0, (data.energy !== undefined ? data.energy : 100) - 10);
-            novaFome = Math.max(0, (data.hunger !== undefined ? data.hunger : 100) - 15);
-          }
-
-          // 3. Guardamos os novos valores calculados
-          await setDoc(userRef, {
-            xp_pet: increment(150),
-            energy: novaEnergia, 
-            hunger: novaFome,
-            lastCategory: currentTask || 'pomodoro',
-            moedas: increment(50),
-            lastUpdate: agora
-          }, { merge: true });
-          
-          // Atualizar métrica global
-          const metricsRef = doc(db, "dashboard", "metrics");
-          await setDoc(metricsRef, {
-            total_pomodoros_app: increment(1)
-          }, { merge: true });
-
-          if(onSessionComplete) onSessionComplete();
-        } catch (error) {
-          console.error("Erro ao salvar progresso:", error);
-        }
+      if (!userId) {
+        setIsBreak(true);
+        setTimeLeft(BREAK_SEC);
+        return;
       }
-      
+
+      try {
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        const data = userSnap.exists() ? userSnap.data() : {};
+        const xpBefore = data.xp_pet || 0;
+        const moedasBefore = data.moedas || 0;
+        const xpAfter = xpBefore + REWARD_XP_FOCUS;
+        const { nivel, evolution } = getLevelFromXp(xpAfter);
+        const { energy, hunger } = applyFocusSession(data.energy, data.hunger);
+
+        await savePetUpdate(
+          {
+            xp_pet: xpAfter,
+            moedas: moedasBefore + REWARD_COINS_FOCUS,
+            energy,
+            hunger,
+            nivel_pet: nivel,
+            evolution,
+            lastCategory: currentTask || 'pomodoro',
+          },
+          `Sessão concluída! +${REWARD_XP_FOCUS} XP e +${REWARD_COINS_FOCUS} moedas.`,
+          xpBefore,
+          xpAfter,
+          true
+        );
+      } catch (error) {
+        console.error('Erro ao salvar progresso:', error);
+        notify.error('Não foi possível guardar o progresso da sessão.');
+      }
+
       setIsBreak(true);
       setTimeLeft(BREAK_SEC);
     } else {
-      notify.success('Pausa terminada. De volta ao trabalho!');
+      if (userId) {
+        try {
+          const userRef = doc(db, 'users', userId);
+          const userSnap = await getDoc(userRef);
+          const data = userSnap.exists() ? userSnap.data() : {};
+          const xpBefore = data.xp_pet || 0;
+          const moedasBefore = data.moedas || 0;
+          const xpAfter = xpBefore + REWARD_XP_BREAK;
+          const { nivel, evolution } = getLevelFromXp(xpAfter);
+          const { energy, hunger } = applyBreakRecovery(data.energy, data.hunger);
+
+          await setDoc(
+            userRef,
+            {
+              xp_pet: xpAfter,
+              moedas: moedasBefore + REWARD_COINS_BREAK,
+              energy,
+              hunger,
+              nivel_pet: nivel,
+              evolution,
+              lastUpdate: new Date(),
+            },
+            { merge: true }
+          );
+
+          if (didLevelUp(xpBefore, xpAfter)) {
+            notify.success(
+              `Pausa concluída! O pet recuperou um pouco. Nível ${nivel} (${evolution})!`
+            );
+          } else {
+            notify.success('Pausa concluída! O pet recuperou energia e fome.');
+          }
+          onSessionComplete?.();
+        } catch (error) {
+          console.error('Erro ao guardar pausa:', error);
+        }
+      } else {
+        notify.success('Pausa terminada. De volta ao trabalho!');
+      }
+
       setIsBreak(false);
       setTimeLeft(WORK_SEC);
     }
@@ -80,12 +141,11 @@ export default function PomodoroTimer({ userId, onSessionComplete }) {
       handleTimerComplete();
     }
     return () => clearInterval(interval);
-    // handleTimerComplete depende do estado na conclusão; incluir nas deps re-dispara ao zerar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isActive, timeLeft]);
 
   const toggleTimer = () => setIsActive(!isActive);
-  
+
   const resetTimer = () => {
     setIsActive(false);
     setTimeLeft(isBreak ? BREAK_SEC : WORK_SEC);
@@ -116,10 +176,10 @@ export default function PomodoroTimer({ userId, onSessionComplete }) {
         </Typography>
 
         <Stack direction="row" justifyContent="center" spacing={2} mb={4}>
-          <Button 
-            variant="contained" 
-            color={isActive ? "warning" : "primary"} 
-            size="large" 
+          <Button
+            variant="contained"
+            color={isActive ? 'warning' : 'primary'}
+            size="large"
             onClick={toggleTimer}
             startIcon={isActive ? <Pause /> : <PlayArrow />}
             sx={{ px: 4, py: 1.5, borderRadius: 8 }}
@@ -134,20 +194,26 @@ export default function PomodoroTimer({ userId, onSessionComplete }) {
         <Box sx={{ mt: 4, p: 3, bgcolor: 'background.default', borderRadius: 4 }}>
           {currentTask ? (
             <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography variant="body1" fontWeight="600">Focado em: <Typography component="span" color="primary">{currentTask}</Typography></Typography>
-              <IconButton color="success" onClick={() => setCurrentTask(null)}><CheckCircle /></IconButton>
+              <Typography variant="body1" fontWeight="600">
+                Focado em: <Typography component="span" color="primary">{currentTask}</Typography>
+              </Typography>
+              <IconButton color="success" onClick={() => setCurrentTask(null)}>
+                <CheckCircle />
+              </IconButton>
             </Stack>
           ) : (
             <Stack direction="row" spacing={2}>
-              <TextField 
-                size="small" 
-                fullWidth 
-                placeholder="O que vais fazer agora?" 
-                value={task} 
-                onChange={(e) => setTask(e.target.value)} 
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="O que vais fazer agora?"
+                value={task}
+                onChange={(e) => setTask(e.target.value)}
                 sx={{ bgcolor: 'white' }}
               />
-              <Button variant="contained" onClick={handleSetTask}>Definir</Button>
+              <Button variant="contained" onClick={handleSetTask}>
+                Definir
+              </Button>
             </Stack>
           )}
         </Box>

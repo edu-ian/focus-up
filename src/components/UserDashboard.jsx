@@ -8,6 +8,7 @@ import Shop from './Shop';
 import AccountSettings from './Settings';
 import MySolicitations from './MySolicitations';
 import MyDonations from './MyDonations';
+import { applyIdleDecay, getLevelFromXp } from '../game/petBalance';
 
 export default function UserDashboard({ user, onLogout }) {
   const [userData, setUserData] = useState(null);
@@ -27,18 +28,33 @@ export default function UserDashboard({ user, onLogout }) {
         // LÓGICA DE DECAIMENTO
         const ultimaAtualizacao = data.lastUpdate ? data.lastUpdate.toDate() : agora;
         const horasPassadas = Math.floor((agora - ultimaAtualizacao) / (1000 * 60 * 60));
-        let dadosAtualizados = { ...data };
+        const progress = getLevelFromXp(data.xp_pet || 0);
+        let dadosAtualizados = {
+          ...data,
+          nivel_pet: progress.nivel,
+          evolution: progress.evolution,
+        };
 
         if (horasPassadas > 0) {
-          const perda = Math.round(horasPassadas * 2.5);
-          dadosAtualizados.hunger = Math.max(0, (data.hunger || 100) - perda);
-          dadosAtualizados.energy = Math.max(0, (data.energy || 100) - perda);
+          const decayed = applyIdleDecay(data.energy, data.hunger, horasPassadas);
+          dadosAtualizados.energy = decayed.energy;
+          dadosAtualizados.hunger = decayed.hunger;
           dadosAtualizados.lastUpdate = agora;
 
           await updateDoc(userRef, {
             hunger: dadosAtualizados.hunger,
             energy: dadosAtualizados.energy,
-            lastUpdate: agora
+            nivel_pet: dadosAtualizados.nivel_pet,
+            evolution: dadosAtualizados.evolution,
+            lastUpdate: agora,
+          });
+        } else if (
+          data.nivel_pet !== progress.nivel ||
+          data.evolution !== progress.evolution
+        ) {
+          await updateDoc(userRef, {
+            nivel_pet: progress.nivel,
+            evolution: progress.evolution,
           });
         }
         setUserData(dadosAtualizados);
